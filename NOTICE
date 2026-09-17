@@ -1,0 +1,21 @@
+Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera
+Copyright 2026 Digital Future Lab - Flanders Make - Hasselt University
+
+This product includes software from gsplat
+(https://github.com/nerfstudio-project/gsplat, version 1.5.3),
+Copyright 2025 Nerfstudio Team, licensed under the Apache License 2.0.
+
+Files copied unchanged from gsplat's examples/ folder:
+    examples/gsplat_viewer_2dgs.py
+    examples/simple_viewer_2dgs.py
+    examples/lib_bilagrid.py      (Copyright 2024 Yuehao Wang, Apache License 2.0)
+    examples/utils.py
+    examples/datasets/normalize.py
+    examples/datasets/traj.py
+
+Files modified from gsplat's examples/ folder (each states its changes at the top):
+    examples/simple_trainer.py
+    examples/gsplat_viewer.py
+    examples/datasets/colmap.py
+
+All other files are original to this repository.

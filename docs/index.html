@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera (WACV 2027)</title>
+<meta name="description" content="WACV 2027. An end-to-end pipeline for photorealistic 3D models of mounted butterflies: handheld focus stacking, a non-contact mirror system for the ventral side, and segmentation-free mirror-aware Gaussian Splatting." />
+<link rel="canonical" href="https://kroverdulve.github.io/gsplat-lepidoptera/" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://kroverdulve.github.io/gsplat-lepidoptera/" />
+<meta property="og:title" content="Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera" />
+<meta property="og:description" content="WACV 2027. An end-to-end pipeline for photorealistic 3D models of mounted butterflies: handheld focus stacking, a non-contact mirror system for the ventral side, and segmentation-free mirror-aware Gaussian Splatting." />
+<meta property="og:image" content="https://kroverdulve.github.io/gsplat-lepidoptera/assets/og.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera" />
+<meta name="twitter:description" content="WACV 2027. An end-to-end pipeline for photorealistic 3D models of mounted butterflies: handheld focus stacking, a non-contact mirror system for the ventral side, and segmentation-free mirror-aware Gaussian Splatting." />
+<meta name="twitter:image" content="https://kroverdulve.github.io/gsplat-lepidoptera/assets/og.jpg" />
+<!-- Google Scholar -->
+<meta name="citation_title" content="Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera" />
+<meta name="citation_author" content="Overdulve, Kristof" />
+<meta name="citation_author" content="Jorissen, Lode" />
+<meta name="citation_author" content="Michiels, Nick" />
+<meta name="citation_publication_date" content="2026" />
+<meta name="citation_conference_title" content="IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)" />
+<meta name="citation_arxiv_id" content="2606.31679" />
+<meta name="citation_pdf_url" content="https://arxiv.org/pdf/2606.31679" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --surface-2: #f1f5f9;
+    --ink: #0f172a;
+    --ink-soft: #243043;
+    --muted: #586273;
+    --faint: #94a3b8;
+    --line: #e7ebf1;
+    --line-strong: #d8dee7;
+    --accent: #475569;
+    --accent-ink: var(--accent);
+    --accent-soft: color-mix(in oklab, var(--accent) 12%, white);
+    --accent-line: color-mix(in oklab, var(--accent) 28%, white);
+
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --disp-weight: 600;
+    --disp-track: -0.022em;
+    --disp-transform: none;
+    --head-style: normal;
+
+    /* hero-specific */
+    --scrim: 0.62;            /* darkness of the video scrim, 0..1 */
+    --hero-ink: #f3f6fb;      /* text over the video */
+    --hero-muted: #b9c2d0;
+    --hero-faint: #8a97a9;
+    --hero-line: rgba(255,255,255,0.16);
+    --hero-accent: #cdd8ec;
+  }
+
+  [data-theme="editorial"] {
+    --font-display: 'Newsreader', Georgia, serif;
+    --font-body: 'Spectral', Georgia, serif;
+    --disp-weight: 500;
+    --disp-track: -0.005em;
+    --head-style: italic;
+    --bg: #fffefb;
+    --surface: #f8f6f1;
+    --surface-2: #f1eee7;
+    --line: #ece8df;
+    --line-strong: #ddd7ca;
+  }
+  [data-theme="bold"] {
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+    --disp-weight: 700;
+    --disp-track: -0.03em;
+    --disp-transform: uppercase;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--accent-soft); }
+  a { color: var(--accent-ink); text-decoration: none; }
+
+  /* =================================================================
+     FIXED SCROLL-SCRUBBED BACKGROUND
+     ================================================================= */
+  .bg-stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #0b0f17;
+  }
+  .bg-stage video,
+  .bg-stage canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .bg-stage video { display: none; }
+  .bg-stage.has-video video { display: block; }
+  .bg-stage.has-video canvas { display: none; }
+  /* readability scrim + vignette */
+  .bg-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% 8%, transparent 30%, rgba(8,11,17,0.55) 100%),
+      linear-gradient(to bottom,
+        rgba(8,11,17,calc(var(--scrim) * 0.55)) 0%,
+        rgba(8,11,17,calc(var(--scrim) * 0.35)) 42%,
+        rgba(8,11,17,calc(var(--scrim) * 0.75)) 100%);
+  }
+
+  /* =================================================================
+     HERO (above the fold) — sits over the fixed background
+     ================================================================= */
+  .hero {
+    position: relative;
+    z-index: 2;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    color: var(--hero-ink);
+    padding: clamp(28px, 4vh, 54px) clamp(20px, 4vw, 56px) 0;
+  }
+  .hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--hero-muted);
+  }
+  .hero-top .brand { display: flex; align-items: center; gap: 9px; }
+  .hero-top .brand .dot {
+    width: 9px; height: 9px; border-radius: 2px;
+    background: var(--hero-accent); transform: rotate(45deg);
+  }
+  .hero-top a { color: var(--hero-muted); }
+  .hero-top a:hover { color: var(--hero-ink); }
+
+  .hero-core {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    max-width: 1080px;
+    margin: 0 auto;
+    width: 100%;
+    padding: clamp(20px, 5vh, 48px) 0;
+  }
+
+  .venue {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--hero-ink);
+    margin-bottom: 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 13px;
+    border: 1px solid var(--hero-line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(4px);
+  }
+  .venue .venue-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hero-accent);
+  }
+  .paper-title {
+    font-family: var(--font-display);
+    font-weight: var(--disp-weight);
+    letter-spacing: var(--disp-track);
+    text-transform: var(--disp-transform);
+    font-size: clamp(2.1rem, 5.4vw, 4rem);
+    line-height: 1.05;
+    margin: 0 0 4px;
+    text-wrap: balance;
+    color: #ffffff;
+  }
+  .paper-title .lite { font-weight: 400; color: var(--hero-muted); }
+
+  /* authors */
+  .authors {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 22px;
+    margin-top: 28px;
+    font-size: 1.06rem;
+    color: var(--hero-ink);
+  }
+  .authors > span { white-space: nowrap; }
+  .authors a {
+    color: var(--hero-ink);
+    font-weight: 600;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--hero-line);
+    transition: color .16s;
+  }
+  .authors a:hover { color: #fff; text-decoration: underline; text-decoration-color: var(--hero-accent); }
+  .authors sup { color: var(--hero-faint); font-size: 0.7em; font-weight: 500; margin-left: 1px; }
+  .affils {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 22px;
+    margin-top: 12px;
+    font-size: 0.92rem;
+    color: var(--hero-muted);
+  }
+  .affils span sup { color: var(--hero-faint); font-size: 0.74em; margin-right: 3px; }
+
+  /* link buttons */
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 36px;
+  }
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 17px;
+    border-radius: 999px;
+    border: 1px solid var(--hero-line);
+    background: rgba(255,255,255,0.07);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: var(--hero-ink);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14.5px;
+    transition: transform .16s, background .16s, border-color .16s;
+  }
+  .link-btn svg { width: 17px; height: 17px; opacity: 0.92; }
+  .link-btn:hover {
+    transform: translateY(-2px);
+    background: rgba(255,255,255,0.15);
+    border-color: var(--hero-accent);
+  }
+
+  /* scroll cue + section preview */
+  .hero-foot {
+    padding: 22px 0 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    transition: opacity .4s ease;
+  }
+  .toc-preview {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--hero-faint);
+  }
+  .toc-preview a { color: var(--hero-faint); transition: color .16s; }
+  .toc-preview a:hover { color: var(--hero-ink); }
+  .toc-preview .sep { opacity: 0.5; }
+  .scroll-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--hero-muted);
+  }
+  .scroll-hint .chev {
+    width: 22px; height: 22px;
+    animation: bob 1.8s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%,100% { transform: translateY(0); opacity: .7; }
+    50% { transform: translateY(5px); opacity: 1; }
+  }
+
+  /* =================================================================
+     CONTENT (below the fold) — opaque, scrolls up over the video
+     ================================================================= */
+  .paper {
+    position: relative;
+    z-index: 2;
+    background: var(--bg);
+    color: var(--ink);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 -40px 80px -30px rgba(8,11,17,0.45);
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 40px);
+  }
+
+  /* teaser figure right under the fold */
+  .teaser {
+    padding-top: clamp(40px, 7vh, 76px);
+  }
+  .figure {
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .ph {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface);
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--surface) 0, var(--surface) 11px,
+      var(--surface-2) 11px, var(--surface-2) 22px);
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-align: center;
+    padding: 18px;
+  }
+  .ph.tall { aspect-ratio: 16 / 9; }
+  .ph.wide { aspect-ratio: 21 / 9; }
+  .ph .ph-tag {
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--muted);
+    max-width: 80%;
+  }
+  .fig-cap {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 12px;
+    text-wrap: pretty;
+  }
+  .fig-cap b { color: var(--ink-soft); font-weight: 600; }
+
+  /* sections */
+  .section {
+    padding: clamp(48px, 8vh, 86px) 0 0;
+    scroll-margin-top: 20px;
+  }
+  .section.last { padding-bottom: clamp(60px, 10vh, 110px); }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sec-num {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent-ink);
+    letter-spacing: 0.06em;
+  }
+  .sec-title {
+    font-family: var(--font-display);
+    font-weight: var(--disp-weight);
+    letter-spacing: var(--disp-track);
+    text-transform: var(--disp-transform);
+    font-size: 1.55rem;
+    color: var(--ink);
+  }
+  .prose { color: var(--ink-soft); }
+  .prose p { margin: 0 0 18px; text-wrap: pretty; max-width: 70ch; }
+  .prose p:last-child { margin-bottom: 0; }
+  .abstract-lead {
+    font-size: clamp(1.12rem, 1.5vw, 1.32rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-style: var(--head-style);
+  }
+  .prose a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--accent-line); }
+
+  .fig-block { margin: 30px 0 4px; }
+
+  /* results metric strip */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 4px 0 30px;
+  }
+  @media (max-width: 600px){ .metrics { grid-template-columns: 1fr; } }
+  .metric {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: var(--surface);
+  }
+  .metric .k {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .metric .v {
+    font-family: var(--font-display);
+    font-weight: var(--disp-weight);
+    font-size: 1.7rem;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .metric .d { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  /* bibtex */
+  .bibtex {
+    position: relative;
+    background: #0e1421;
+    border: 1px solid #1b2433;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .bibtex-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    border-bottom: 1px solid #1b2433;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a97a9;
+  }
+  .copy-btn {
+    appearance: none;
+    border: 1px solid #283449;
+    background: #131c2c;
+    color: #c6d2e4;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 6px 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .copy-btn:hover { background: #1a2538; border-color: #38465c; color: #fff; }
+  .copy-btn.done { color: #7ee0a8; border-color: #2c4a3a; }
+  .bibtex pre {
+    margin: 0;
+    padding: 18px 16px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: #c6d2e4;
+    tab-size: 2;
+  }
+  .bibtex .key { color: #93b4f0; }
+  .bibtex .field { color: #cdb389; }
+  .bibtex .str { color: #9bd6b0; }
+
+  /* acknowledgements */
+  .ack { color: var(--muted); font-size: 15.5px; }
+  .ack .logos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  .ack .logo-ph {
+    height: 56px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--faint);
+    text-align: center;
+  }
+
+  /* footer */
+  .foot {
+    border-top: 1px solid var(--line);
+    margin-top: clamp(48px, 8vh, 90px);
+    padding: 28px 0 56px;
+  }
+  .foot-in {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .foot-in a { color: var(--muted); }
+  .foot-in a:hover { color: var(--accent-ink); }
+
+  /* =================================================================
+     RIGHT-SIDE SECTION RAIL (progress + nav)
+     ================================================================= */
+  .rail {
+    position: fixed;
+    right: clamp(14px, 2.2vw, 30px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity .4s ease;
+    pointer-events: none;
+  }
+  .rail.show { opacity: 1; pointer-events: auto; }
+  .rail a {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    justify-content: flex-end;
+    padding: 5px 0;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .rail a .lbl {
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity .2s, transform .2s, color .2s;
+    white-space: nowrap;
+  }
+  .rail a .tick {
+    width: 22px; height: 2px; border-radius: 2px;
+    background: var(--line-strong);
+    transition: background .2s, width .2s;
+    flex: none;
+  }
+  .rail a:hover .lbl { opacity: 1; transform: none; color: var(--ink-soft); }
+  .rail a:hover .tick { background: var(--muted); }
+  .rail a.active .lbl { opacity: 1; transform: none; color: var(--accent-ink); }
+  .rail a.active .tick { background: var(--accent); width: 32px; }
+  @media (max-width: 1080px){ .rail { display: none; } }
+
+  /* =================================================================
+     METHOD / RESULTS — interactive figures
+     ================================================================= */
+  .sub-h {
+    font-family: var(--font-display);
+    font-weight: var(--disp-weight);
+    letter-spacing: var(--disp-track);
+    font-style: var(--head-style);
+    font-size: 1.18rem;
+    color: var(--ink);
+    margin: 44px 0 14px;
+    scroll-margin-top: 24px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .sub-n {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--accent-ink);
+    letter-spacing: 0.04em;
+  }
+  .figure.framed { border: 1px solid var(--line); background: #fff; }
+  .figure img, .fig-pair img { display: block; width: 100%; height: auto; }
+
+  /* pipeline strip */
+  .pipeline {
+    list-style: none; padding: 0; margin: 30px 0 6px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    counter-reset: none;
+  }
+  .pipeline li { position: relative; min-width: 0; }
+  .pipeline li + li::before {
+    content: ""; position: absolute; left: -10px; top: 46px;
+    width: 8px; height: 8px;
+    border-top: 1.5px solid var(--faint); border-right: 1.5px solid var(--faint);
+    transform: rotate(45deg);
+  }
+  .pipeline a {
+    display: flex; flex-direction: column; height: 100%;
+    color: inherit; border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 8px 12px; background: var(--surface);
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .pipeline a:hover { border-color: var(--accent-line); transform: translateY(-2px); box-shadow: 0 8px 20px -14px rgba(15,23,42,.35); }
+  .pipeline img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 7px; background: #000; display: block; }
+  .pipeline .st-n { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-ink); margin: 10px 2px 2px; letter-spacing: .06em; }
+  .pipeline .st-l { font-family: var(--font-display); font-weight: 600; font-size: 14px; line-height: 1.25; color: var(--ink); margin: 0 2px; }
+  .pipeline .st-d { font-size: 12px; color: var(--muted); line-height: 1.35; margin: 3px 2px 0; }
+  @media (max-width: 700px) {
+    .pipeline { grid-template-columns: repeat(2, 1fr); }
+    .pipeline li + li::before { display: none; }
+    .pipeline li:last-child { grid-column: 1 / -1; }
+    .pipeline li:last-child img { aspect-ratio: 16 / 7; }
+  }
+
+  /* before/after slider */
+  .compare {
+    --pos: 50%;
+    position: relative; overflow: hidden; border-radius: 14px;
+    background: var(--surface-2);
+    cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+    outline: none;
+  }
+  .compare img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+  .compare .cmp-b { position: absolute; inset: 0; height: 100%; object-fit: cover; clip-path: inset(0 0 0 var(--pos)); }
+  .compare::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: var(--pos);
+    width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.18);
+    pointer-events: none;
+  }
+  .compare .knob {
+    position: absolute; top: 50%; left: var(--pos); z-index: 2;
+    width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3);
+    display: flex; align-items: center; justify-content: center; pointer-events: none;
+    color: #334155;
+  }
+  .compare:focus-visible .knob { box-shadow: 0 0 0 3px var(--accent), 0 2px 10px rgba(0,0,0,.3); }
+  .cmp-lbl {
+    position: absolute; top: 12px; z-index: 1;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .05em;
+    color: #fff; background: rgba(10,14,23,.62); backdrop-filter: blur(4px);
+    padding: 4px 9px; border-radius: 6px; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .cmp-lbl.l { left: 12px; } .cmp-lbl.r { right: 12px; }
+
+  /* segmented control */
+  .seg {
+    display: inline-flex; gap: 2px; padding: 3px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+    margin-top: 12px; flex-wrap: wrap;
+  }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    font: 500 13px/1 var(--font-body); color: var(--muted);
+    padding: 8px 13px; border-radius: 7px; transition: background .15s, color .15s;
+  }
+  .seg button span { font-family: var(--font-mono); font-size: 11px; opacity: .7; margin-right: 3px; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(15,23,42,.12); }
+  .seg.small button { font-size: 12.5px; padding: 6px 11px; }
+  .fig-ctrl { display: flex; justify-content: center; }
+
+  /* render passes */
+  .passes { display: flex; flex-direction: column; align-items: center; }
+  .passes-stage { position: relative; width: 100%; aspect-ratio: 3 / 2; border-radius: 14px; overflow: hidden; background: #111; }
+  .passes-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .45s ease; }
+  .passes-stage img.on { opacity: 1; }
+
+  /* static pairs */
+  .fig-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fig-pair img { border-radius: 12px; }
+  .pair-view { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 640px; margin: 0 auto; }
+  .pair-view figure, .v-panels figure { margin: 0; }
+  .pair-view img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+  .pair-view figcaption, .v-panels figcaption {
+    text-align: center; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted); margin-top: 8px;
+  }
+  @media (max-width: 520px) { .fig-pair { grid-template-columns: 1fr; } }
+
+  /* ventral viewer */
+  .v-panels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .v-img { aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .v-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .v-panels figure.hl .v-img { border-color: var(--accent-line); box-shadow: 0 0 0 1px var(--accent-line); }
+  .v-panels figure.hl figcaption { color: var(--accent-ink); }
+  .v-thumbs { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .v-thumbs button {
+    appearance: none; padding: 0; cursor: pointer; width: 54px; height: 54px;
+    border-radius: 9px; overflow: hidden; border: 2px solid transparent; background: var(--surface);
+    opacity: .55; transition: opacity .15s, border-color .15s;
+  }
+  .v-thumbs button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .v-thumbs button:hover { opacity: .85; }
+  .v-thumbs button.on { opacity: 1; border-color: var(--accent); }
+  @media (max-width: 520px) { .v-panels { gap: 6px; } .v-panels figcaption { font-size: 9.5px; } }
+
+  /* result tables */
+  .table-wrap { overflow-x: auto; margin: 22px 0 4px; border: 1px solid var(--line); border-radius: 12px; }
+  table.res { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  table.res th, table.res td { padding: 9px 12px; text-align: right; white-space: nowrap; }
+  table.res th:first-child, table.res td:first-child { text-align: left; }
+  table.res thead th {
+    font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted); background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  table.res tbody tr + tr td { border-top: 1px solid var(--line); }
+  table.res td { color: var(--ink-soft); }
+  table.res td b { color: var(--ink); font-weight: 650; }
+  table.res tr.ours td { background: var(--accent-soft); }
+  table.res tr.ref td { color: var(--muted); }
+  table.sortable th[data-k] { cursor: pointer; user-select: none; }
+  table.sortable th[data-k]:hover { color: var(--ink); }
+  table.sortable th.sorted { color: var(--accent-ink); }
+  table.sortable th.sorted::after { content: " •"; }
+  .tag-b, .tag-o {
+    font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 5px;
+  }
+  .tag-b { background: var(--surface-2); color: var(--muted); }
+  .tag-o { background: var(--accent); color: #fff; }
+  .table-wrap + .fig-cap { margin-bottom: 8px; }
+
+  /* embedded SuperSplat viewer (click to load) */
+  .splat {
+    position: relative; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+    background: #fff; border: 1px solid var(--line);
+  }
+  .splat iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+  .splat-poster {
+    appearance: none; border: 0; padding: 0; margin: 0; cursor: pointer;
+    position: absolute; inset: 0; width: 100%; height: 100%; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .splat-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease, filter .3s; }
+  .splat-poster:hover img { transform: scale(1.02); filter: brightness(.94); }
+  .splat-play {
+    position: relative; display: inline-flex; align-items: center; gap: 9px;
+    font: 600 14px/1 var(--font-body); color: #fff;
+    background: rgba(10,14,23,.78); backdrop-filter: blur(6px);
+    padding: 12px 18px; border-radius: 999px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.45);
+    transition: background .15s, transform .15s;
+  }
+  .splat-poster:hover .splat-play { background: var(--accent); transform: translateY(-1px); }
+  .splat-poster:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .splat-bar {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center;
+    margin-top: 10px; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+  }
+  .splat-bar a { color: var(--accent-ink); }
+  .splat-bar a:hover { text-decoration: underline; }
+  @media (max-width: 600px) { .splat { aspect-ratio: 4 / 5; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .passes-stage img { transition: none; }
+    .pipeline a { transition: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html { scroll-behavior: auto; }
+    .scroll-hint .chev { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <!-- ============ FIXED SCROLL-SCRUBBED BACKGROUND ============ -->
+  <div class="bg-stage" id="bgStage">
+    <video id="bgVideo" muted playsinline preload="auto" tabindex="-1" aria-hidden="true">
+      <source id="bgVideoMp4" src="assets/header-scrub.mp4" type="video/mp4" />
+    </video>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+    <div class="bg-scrim"></div>
+  </div>
+
+  <!-- ============ SECTION RAIL ============ -->
+  <nav class="rail" id="rail" aria-label="Sections">
+    <a href="#abstract"><span class="lbl">Abstract</span><span class="tick"></span></a>
+    <a href="#method"><span class="lbl">Method</span><span class="tick"></span></a>
+    <a href="#results"><span class="lbl">Results</span><span class="tick"></span></a>
+    <a href="#citation"><span class="lbl">Citation</span><span class="tick"></span></a>
+    <a href="#acknowledgements"><span class="lbl">Thanks</span><span class="tick"></span></a>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="hero-core">
+      <div class="venue"><span class="venue-dot" aria-hidden="true"></span>WACV 2027</div>
+      <h1 class="paper-title"><span>Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera</span></h1>
+
+      <div class="authors">
+        <span><a href="https://kroverdulve.github.io/" target="_blank" rel="noopener">Kristof Overdulve</a><sup>1</sup></span>
+        <span><a href="https://www.ljorissen.be/" target="_blank" rel="noopener">Lode Jorissen</a><sup>1</sup></span>
+        <span><a href="https://www.uhasselt.be/nl/wie-is-wie/nick-michiels" target="_blank" rel="noopener">Nick Michiels</a><sup>1</sup></span>
+      </div>
+      <div class="affils">
+        <span><sup>1</sup>Digital Future Lab, UHasselt</span>
+      </div>
+
+      <div class="links">
+        <a class="link-btn" href="https://arxiv.org/abs/2606.31679" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8l-2 4 2 4M16 8l2 4-2 4"/></svg>
+          arXiv
+        </a>
+        <a class="link-btn" href="https://github.com/KrOverdulve/gsplat-lepidoptera" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18-6-6 6-6M15 6l6 6-6 6"/></svg>
+          Code
+        </a>
+        <a class="link-btn" href="https://huggingface.co/datasets/KeejOow/butterfly1" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v6c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8v-6"/><path d="M4.5 11.5v6c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8v-6"/></svg>
+          Data
+        </a>
+        <a class="link-btn" href="https://superspl.at/scene/095a2469" target="_blank" rel="noopener">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2L15.06 5.5V12.5L9 16L2.94 12.5V5.5L9 2Z"/>
+            <path d="M2.94 5.5L9 9L15.06 5.5"/>
+            <path d="M9 9V16"/>
+            <g transform="translate(18 18) rotate(-45)">
+              <rect x="-4.6" y="-2.1" width="5.2" height="4.2" rx="2.1"/>
+              <rect x="-0.6" y="-2.1" width="5.2" height="4.2" rx="2.1"/>
+            </g>
+          </svg>
+          Result
+        </a>
+        <a class="link-btn" href="#citation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7c-1.8 0-3 1.4-3 3.2 0 1.8 1.3 3 3 3 .3 1.7-.6 2.8-2 3.4M17 7c-1.8 0-3 1.4-3 3.2 0 1.8 1.3 3 3 3 .3 1.7-.6 2.8-2 3.4"/></svg>
+          BibTeX
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-foot" id="heroFoot">
+      <div class="toc-preview">
+        <a href="#abstract">Abstract</a><span class="sep">·</span>
+        <a href="#method">Method</a><span class="sep">·</span>
+        <a href="#results">Results</a><span class="sep">·</span>
+        <a href="#citation">Citation</a><span class="sep">·</span>
+        <a href="#acknowledgements">Acknowledgements</a>
+      </div>
+      <div class="scroll-hint">
+        <span>Scroll</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ PAPER BODY ============ -->
+  <main class="paper">
+    <div class="wrap">
+      <!-- teaser -->
+      <div class="teaser">
+        <div class="figure">
+          <span class="ph-tag"><img src="assets/teaser.png" width="100%"></img></span>
+        </div>
+        <p class="fig-cap"><b>Photorealistic 3D reconstruction of mounted Lepidoptera.</b> Dorsal (top) and ventral (bottom) renders of five specimens reconstructed with our pipeline; the ventral surface is only ever observed through a mirror. For display, each specimen is isolated from its background using a 3D bounding box crop.</p>
+      </div>
+
+      <!-- 01 Abstract -->
+      <section class="section" id="abstract">
+        <div class="sec-head">
+          <span class="sec-num">01</span>
+          <h2 class="sec-title">Abstract</h2>
+        </div>
+        <div class="prose">
+          <p class="abstract-lead">
+            Mounted butterflies are among the most striking objects in natural history collections. However, their beauty is notoriously hard to digitize in 3D: they are small and fragile, with microscopic hairs and vein structures. Capturing them in sufficient detail, therefore, requires a macro lens, which has a very limited Depth of Field (DoF). Moreover, a camera body cannot be maneuvered beneath a pinned specimen to photograph its ventral surface. We introduce an end-to-end pipeline that resolves these challenges, turning such specimens into photorealistic 3D models viewable from every direction. It combines three ingredients: handheld focus stacking for all-in-focus macro capture without a tripod, a non-contact first-surface mirror system that exposes the ventral surface without touching the specimen, and a segmentation-free, mirror-aware 3D Gaussian Splatting extension. We validate the reconstructions and design decisions on nine diverse specimens.
+          </p>
+        </div>
+      </section>
+
+      <!-- 02 Method -->
+      <section class="section" id="method">
+        <div class="sec-head">
+          <span class="sec-num">02</span>
+          <h2 class="sec-title">Method</h2>
+        </div>
+        <div class="prose">
+          <p>Three things make mounted butterflies hard to scan. Macro lenses have a razor-thin depth of field, so no single photo is sharp everywhere. The pin and the case stop you from ever getting a camera underneath. And once you put a mirror in the scene to see that underside, standard 3D Gaussian Splatting gets confused: it happily reconstructs a second, "virtual" butterfly behind the glass.</p>
+          <p>Our pipeline tackles each of these in turn. Click a stage below to jump to how it works.</p>
+        </div>
+
+        <ol class="pipeline" aria-label="Pipeline overview">
+          <li><a href="#m-stack"><img src="assets/figs/pipe_record.webp" alt="A burst of shallow depth-of-field macro frames" loading="lazy"><span class="st-n">01</span><span class="st-l">Handheld focus stack</span><span class="st-d">20–40 frames per viewpoint</span></a></li>
+          <li><a href="#m-stack"><img src="assets/figs/pipe_stacked.webp" alt="The fused all-in-focus image" loading="lazy"><span class="st-n">02</span><span class="st-l">Align &amp; fuse</span><span class="st-d">one all-in-focus image</span></a></li>
+          <li><a href="#m-sfm"><img src="assets/figs/pipe_sfm.webp" alt="Recovered camera poses around the specimen" loading="lazy"><span class="st-n">03</span><span class="st-l">SfM &amp; MVS</span><span class="st-d">poses + dense point cloud</span></a></li>
+          <li><a href="#m-plane"><img src="assets/figs/pipe_plane.webp" alt="Dense point cloud with the detected mirror plane" loading="lazy"><span class="st-n">04</span><span class="st-l">Find the mirror</span><span class="st-d">via point-cloud symmetry</span></a></li>
+          <li><a href="#m-gs"><img src="assets/figs/pipe_gs.webp" alt="The final reconstructed specimen" loading="lazy"><span class="st-n">05</span><span class="st-l">Mirror-aware splatting</span><span class="st-d">one consistent 3D model</span></a></li>
+        </ol>
+
+        <!-- 2.1 -->
+        <h3 class="sub-h" id="m-stack"><span class="sub-n">2.1</span>Handheld focus stacking</h3>
+        <div class="prose">
+          <p>At each viewpoint, we fire a quick burst of 20–40 frames on a Canon EOS R5C with a macro lens, starting focus at the nearest part of the specimen so that each frame catches a different depth slice in focus. No tripod or focus rail is needed, which keeps capture fast.</p>
+          <p>The catch with going handheld is that your hands move a little between frames. If you fuse the burst as-is, you get ghosting and doubled edges. So we first register every frame to its neighbour with ECC, which estimates a small affine warp by maximising image correlation directly. We then merge the aligned stack with multi-resolution pyramid fusion (Helicon Focus), which takes the fine detail from whichever frame is sharpest at each scale and blends colour smoothly. <b>Drag the slider</b> to see the difference.</p>
+        </div>
+        <div class="fig-block">
+          <div class="compare" data-start="50">
+            <img src="assets/figs/stack_noalign.webp" alt="Focus stack fused without alignment: ghosted, doubled edges" class="cmp-a">
+            <img src="assets/figs/stack_align.webp" alt="Focus stack fused after ECC alignment: sharp edges" class="cmp-b">
+            <span class="cmp-lbl l">No alignment</span><span class="cmp-lbl r">With alignment</span>
+          </div>
+          <p class="fig-cap"><b>Handheld focus stacking.</b> Left: fusing the raw burst gives ghost edges from hand jitter. Right: after ECC registration, the fused image is sharp across the whole wing.</p>
+        </div>
+
+        <!-- 2.2 -->
+        <h3 class="sub-h" id="m-mirror"><span class="sub-n">2.2</span>Seeing the underside with mirrors</h3>
+        <div class="prose">
+          <p>A pinned butterfly sits a few centimetres above the bottom of its case, and its wings are held only by dried tissue. Removing the specimen from the case to photograph the ventral side risks damaging the specimens. Instead, we slide two small <em>first-surface</em> mirrors underneath, one on each side of the pin. On these the reflective coating sits on the front of the glass, so you avoid the faint double reflection and colour fringing of an ordinary mirror. We use inexpensive dental examination mirrors, which happen to be the right size for 3–10&nbsp;cm specimens.</p>
+        </div>
+        <div class="fig-block">
+          <div class="fig-pair">
+            <img src="assets/figs/setup_mirror.webp" alt="A blue butterfly above a mirror that shows its brown underside" loading="lazy">
+            <img src="assets/figs/setup_mirror2.webp" alt="Two specimens photographed together above mirrors" loading="lazy">
+          </div>
+          <p class="fig-cap"><b>The mirror setup.</b> The camera sees the dorsal side directly and the ventral side only in the reflection, which often looks completely different.</p>
+        </div>
+
+        <!-- 2.3 -->
+        <h3 class="sub-h" id="m-sfm"><span class="sub-n">2.3</span>Poses and a dense point cloud</h3>
+        <div class="prose">
+          <p>From the fused images, we recover camera poses with <a href="https://github.com/cvg/Hierarchical-Localization" target="_blank" rel="noopener">HLOC</a> (COLMAP with SuperPoint + SuperGlue). Our viewpoints are fairly sparse, and COLMAP's default SIFT features couldn't reliably match all of them. COLMAP multi-view stereo then gives us a dense point cloud, which we use for two things: initialising the Gaussians and finding the mirror.</p>
+        </div>
+
+        <h3 class="sub-h" id="m-plane"><span class="sub-n">2.4</span>Finding the mirror, no segmentation needed</h3>
+        <div class="prose">
+          <p>Multi-view stereo doesn't know about the mirror, so it reconstructs the butterfly <em>and</em> its reflection as if both were real. The point cloud therefore contains two mirrored copies of the specimen, and the mirror is their plane of symmetry. Find that symmetry and you've found the mirror, without any masks or depth supervision.</p>
+          <p>We use the mirror-symmetry-via-registration trick. We flip the cloud across an arbitrary plane, register the flipped copy back onto the original (FPFH + RANSAC, refined with ICP), and combine the two transforms. The result is a reflection whose plane can be read off in closed form. Butterflies are themselves left–right symmetric, though, so the registration sometimes locks onto the <em>butterfly's</em> symmetry plane instead. We therefore repeat the search for a symmetry plane 10 times and keep the most confident candidate that has all cameras on the same side.</p>
+        </div>
+        <div class="fig-block">
+          <div class="figure framed"><img src="assets/figs/pipe_plane.webp" alt="Dense point cloud with the specimen, its reflection and the detected mirror plane" loading="lazy"></div>
+          <p class="fig-cap"><b>Mirror-plane detection.</b> The dense MVS cloud contains the specimen and its mirrored copy. The plane of symmetry between them is the mirror.</p>
+        </div>
+
+        <!-- 2.5 -->
+        <h3 class="sub-h" id="m-gs"><span class="sub-n">2.5</span>Mirror-aware Gaussian Splatting</h3>
+        <div class="prose">
+          <p>We build on <a href="https://surfsplatting.github.io/" target="_blank" rel="noopener">2D Gaussian Splatting</a>, using flat surfels that hug surfaces better than 3D blobs. The scene gets two sets of Gaussians: one set for the <b>specimen</b>, and a separate flat set for the <b>mirror surface</b>, which is pinned to the detected plane.</p>
+          <p>Every training view is rendered in three passes. The <em>mirror pass</em> draws the mirror surface. The <em>reflected pass</em> renders the <em>same</em> specimen Gaussians from the camera mirrored across the plane, which is exactly what you'd see in the glass, and only inside the mirror's footprint. The <em>direct pass</em> draws the specimen from the real camera on top. Since the reflection reuses the same Gaussians, every mirror pixel supervises the specimen's underside. Step through the passes:</p>
+        </div>
+        <div class="fig-block">
+          <div class="passes" role="group" aria-label="Rendering passes">
+            <div class="passes-stage">
+              <img src="assets/figs/pass_1.webp" alt="Pass 1: only the mirror surface" class="on">
+              <img src="assets/figs/pass_2.webp" alt="Pass 2: mirror plus the reflected specimen" loading="lazy">
+              <img src="assets/figs/pass_3.webp" alt="Pass 3: final render with the direct specimen on top" loading="lazy">
+            </div>
+            <div class="seg" role="tablist">
+              <button type="button" class="on" data-i="0" role="tab" aria-selected="true"><span>1</span> Mirror</button>
+              <button type="button" data-i="1" role="tab" aria-selected="false"><span>2</span>Mirror + Reflected</button>
+              <button type="button" data-i="2" role="tab" aria-selected="false"><span>3</span>Mirror + Reflected + Direct</button>
+            </div>
+          </div>
+          <p class="fig-cap"><b>Rendering passes</b>, composited back to front: the mirror Gaussians, then the reflected specimen confined to the mirror, then the direct specimen (the final render).</p>
+        </div>
+        <div class="prose">
+          <p>Why bother modelling the mirror surface at all? Without it, the optimiser has no good way to explain the big, shiny, mostly textureless area around the butterfly, so it scatters low-opacity floaters all over the place, leaving a halo you'd have to clean up by hand. Because the reflection is composited <em>in front of</em> the mirror surface, the mirror Gaussians can only soak up leftover mirror pixels. They can't cheat by painting a copy of the butterfly onto the glass.</p>
+          <p>Two small regularisers help get a clean cut-out. An <b>alpha-entropy</b> loss pushes each pixel to be fully opaque or fully empty, so the specimen gets a crisp edge instead of a soft haze. 2DGS's <b>depth-distortion</b> loss, applied to the reflected pass where floaters tend to pile up, flattens the wings and clears out the remaining floaters.</p>
+        </div>
+        <div class="fig-block">
+          <div class="pair-view" id="regView">
+            <figure><img src="assets/figs/reg_alpha_off.webp" alt="Render without the regulariser" loading="lazy"><figcaption>Off</figcaption></figure>
+            <figure><img src="assets/figs/reg_alpha_on.webp" alt="Render with the regulariser" loading="lazy"><figcaption>On</figcaption></figure>
+          </div>
+          <div class="fig-ctrl">
+            <div class="seg small" data-pair="regView" role="tablist" aria-label="Regulariser">
+              <button type="button" class="on" data-a="assets/figs/reg_alpha_off.webp" data-b="assets/figs/reg_alpha_on.webp">Alpha-entropy</button>
+              <button type="button" data-a="assets/figs/reg_dist_off.webp" data-b="assets/figs/reg_dist_on.webp">Depth distortion</button>
+            </div>
+          </div>
+          <p class="fig-cap"><b>Effect of the regularisers.</b> Switch between the two losses to compare a render with each one off and on.</p>
+        </div>
+        <div class="prose">
+          <p>After training, we throw away the mirror Gaussians and keep only the butterfly. Everything is built on <a href="https://github.com/nerfstudio-project/gsplat" target="_blank" rel="noopener">gsplat</a>, and the reflection adds no trainable parameters.</p>
+        </div>
+
+        <!-- 2.6 interactive result -->
+        <h3 class="sub-h" id="m-viewer"><span class="sub-n">2.6</span>Try it yourself</h3>
+        <div class="prose">
+          <p>Here's the end result for an Old World Swallowtail. The reconstruction runs live in your browser, so you can orbit around it and look underneath at the ventral side, which the camera only ever saw in the mirror.</p>
+        </div>
+        <div class="fig-block">
+          <div class="splat" id="splat" data-src="https://superspl.at/s?id=095a2469">
+            <button type="button" class="splat-poster" aria-label="Load the interactive 3D viewer">
+              <img src="https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/095a2469/v1/xl.webp" alt="Preview of the reconstructed Old World Swallowtail" loading="lazy">
+              <span class="splat-play">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 20.66 7v10L12 22l-8.66-5V7z"/><path d="M3.34 7 12 12l8.66-5M12 12v10"/></svg>
+                Load interactive 3D viewer
+              </span>
+            </button>
+          </div>
+          <div class="splat-bar">
+            <span class="splat-hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</span>
+            <a href="https://superspl.at/scene/095a2469" target="_blank" rel="noopener">Open on SuperSplat ↗</a>
+          </div>
+          <p class="fig-cap"><b>Interactive result.</b> Our full model of a mounted Old World Swallowtail (<i>Papilio machaon</i>), cropped to the specimen with a 3D bounding box. Hosted on SuperSplat.</p>
+        </div>
+      </section>
+
+      <!-- 03 Results -->
+      <section class="section" id="results">
+        <div class="sec-head">
+          <span class="sec-num">03</span>
+          <h2 class="sec-title">Results</h2>
+        </div>
+        <div class="prose">
+          <p>We tested the pipeline on <b>nine mounted specimens</b>, picked to cover iridescence, size, wing patterns and mounting styles. Each one has 40–90 focus-stacked viewpoints at 8K. Digitising a specimen takes about half an hour of photography plus roughly 1.5 hours of mostly unattended compute on a single RTX&nbsp;4090. No existing system does the whole job end to end, so we evaluate the two halves separately: handling macro defocus, and mirror-aware reconstruction.</p>
+        </div>
+
+        <!-- 3.1 -->
+        <h3 class="sub-h" id="r-dof"><span class="sub-n">3.1</span>Focus stacking beats DoF-aware splatting</h3>
+        <div class="prose">
+          <p>Before adding the mirror, we asked a simpler question: is it better to focus-stack up front, or to train on the raw shallow-DoF frames with a depth-of-field-aware method? We compared against <a href="https://dof-gaussian.github.io/" target="_blank" rel="noopener">DoF-Gaussian</a>, which learns a lens model with a differentiable circle of confusion. On our data it can't recover the fine scale and vein detail. Focus stacking gains 3.6–4.2&nbsp;dB PSNR and more than halves the LPIPS error.</p>
+        </div>
+        <div class="fig-block">
+          <div class="compare" data-start="50" id="dofCompare">
+            <img src="assets/figs/dof_base_1.webp" alt="DoF-Gaussian render of a held-out view" class="cmp-a" loading="lazy">
+            <img src="assets/figs/dof_ours_1.webp" alt="Our focus-stacked 2DGS render of the same view" class="cmp-b" loading="lazy">
+            <span class="cmp-lbl l">DoF-Gaussian</span><span class="cmp-lbl r">Ours (focus stacking)</span>
+          </div>
+          <div class="fig-ctrl">
+            <div class="seg small" data-swap="dofCompare" role="tablist" aria-label="Held-out view">
+              <button type="button" class="on" data-a="assets/figs/dof_base_1.webp" data-b="assets/figs/dof_ours_1.webp">View 1</button>
+              <button type="button" data-a="assets/figs/dof_base_2.webp" data-b="assets/figs/dof_ours_2.webp">View 2</button>
+            </div>
+          </div>
+          <p class="fig-cap"><b>Macro-defocus handling</b> on two held-out views. Drag to compare. Focus stacking keeps the scales, veins and patterns that DoF-Gaussian blurs away.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="res">
+            <thead><tr><th>Method</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th></tr></thead>
+            <tbody>
+              <tr><td>DoF-Gaussian</td><td>26.06</td><td>0.926</td><td>0.0885</td></tr>
+              <tr><td>Focus stacking (3DGS)</td><td>29.71</td><td>0.947</td><td>0.0438</td></tr>
+              <tr class="ours"><td>Focus stacking (2DGS)</td><td><b>30.30</b></td><td><b>0.949</b></td><td><b>0.0408</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3.2 -->
+        <h3 class="sub-h" id="r-mirror"><span class="sub-n">3.2</span>Does mirror-awareness cost anything?</h3>
+        <div class="prose">
+          <p>A regular 2DGS model can explain each photo as two unrelated objects, the butterfly and a separate "virtual" one behind the glass. Ours has to reconstruct <em>one</em> butterfly whose direct view and reflection agree. Even so, it matches plain 2DGS on every metric (−0.11&nbsp;dB PSNR) with <b>2.4× fewer Gaussians</b>, and you get a single specimen you can view from any side.</p>
+          <p>Two more findings from the ablation below. Adaptive densification <em>hurts</em> on these specimens: the dense MVS cloud already covers them well, so densification mostly adds floaters for the background and the mirror. We turn it off. And dropping the mirror Gaussians costs about 2.9&nbsp;dB, because the optimiser fills the mirror with floaters instead. <b>Click a column header</b> to sort.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="res sortable" id="ablation">
+            <thead><tr>
+              <th data-k="role">Model</th>
+              <th>Reflect</th><th>Mirror GS</th><th>Densify</th><th>Reg.</th>
+              <th data-k="num" data-dir="desc">PSNR ↑</th>
+              <th data-k="num" data-dir="desc">SSIM ↑</th>
+              <th data-k="num" data-dir="asc">LPIPS ↓</th>
+              <th data-k="num" data-dir="asc">#GS (M) ↓</th>
+            </tr></thead>
+            <tbody>
+              <tr data-o="0"><td><span class="tag-b">2DGS</span></td><td>–</td><td>–</td><td>ADC</td><td>–</td><td>29.77</td><td>0.945</td><td>0.0421</td><td>1.35</td></tr>
+              <tr data-o="1"><td><span class="tag-b">2DGS</span></td><td>–</td><td>–</td><td>none</td><td>–</td><td><b>31.16</b></td><td>0.947</td><td>0.0400</td><td>0.91</td></tr>
+              <tr data-o="2"><td>Ablation</td><td>Camera</td><td>✓</td><td>none</td><td>–</td><td>31.12</td><td><b>0.950</b></td><td><b>0.0392</b></td><td><b>0.38</b></td></tr>
+              <tr data-o="3"><td>Ablation</td><td>Camera</td><td>✓</td><td>ADC</td><td>–</td><td>27.43</td><td>0.940</td><td>0.0566</td><td>0.98</td></tr>
+              <tr data-o="4"><td>Ablation</td><td>Camera</td><td>–</td><td>none</td><td>–</td><td>28.25</td><td>0.940</td><td>0.0522</td><td>0.42</td></tr>
+              <tr data-o="5"><td>Ablation</td><td>Splats</td><td>–</td><td>ADC</td><td>–</td><td>23.69</td><td>0.924</td><td>0.0781</td><td>1.17</td></tr>
+              <tr data-o="6"><td>Ablation</td><td>Splats</td><td>–</td><td>none</td><td>–</td><td>28.35</td><td>0.941</td><td>0.0513</td><td>0.84</td></tr>
+              <tr data-o="7" class="ours"><td><span class="tag-o">Ours</span></td><td>Camera</td><td>✓</td><td>none</td><td>✓</td><td>31.05</td><td>0.949</td><td>0.0412</td><td>0.38</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fig-cap"><b>Mirror-aware reconstruction and ablation.</b> Masked quality on held-out dorsal views, averaged over the eight mirror specimens. <i>Reflect</i>: reflect the camera or the splats. <i>Mirror GS</i>: explicit mirror Gaussians. <i>Densify</i>: adaptive density control or none. <i>Reg.</i>: the two regularisers. The first two rows are mirror-unaware 2DGS baselines.</p>
+
+        <!-- 3.3 -->
+        <h3 class="sub-h" id="r-ventral"><span class="sub-n">3.3</span>The underside, seen only in a mirror</h3>
+        <div class="prose">
+          <p>This is the real test: the model only ever saw the ventral side as a reflection, so how close does it get to the real thing? To find out, we took specimens out of their cases (exactly the handling our pipeline is meant to avoid), hung them on nylon thread, and photographed the underside directly as held-out ground truth. Two specimens lost their antennae in the process, so we kept this to four.</p>
+          <p>Our method beats the mirror-unaware baseline on every metric, most clearly on the perceptual ones. The ground-truth photos were taken with a different camera, lens and lighting, so absolute colours differ and PSNR is low across the board. LPIPS and FLIP are more telling here. As a sanity check, the ventral side scores close to the <em>dorsal</em> side measured under the same protocol. <b>Pick a view</b> below.</p>
+        </div>
+        <div class="fig-block">
+          <div class="ventral" id="ventral">
+            <div class="v-panels">
+              <figure><div class="v-img"><img src="assets/figs/ventral_gt_1.webp" alt="Ground-truth ventral photograph" data-k="gt"></div><figcaption>Ground truth</figcaption></figure>
+              <figure class="hl"><div class="v-img"><img src="assets/figs/ventral_ours_1.webp" alt="Our reconstruction, rendered from below" data-k="ours"></div><figcaption>Ours</figcaption></figure>
+              <figure><div class="v-img"><img src="assets/figs/ventral_base_1.webp" alt="Mirror-unaware baseline, rendered from below" data-k="base"></div><figcaption>No mirroring</figcaption></figure>
+            </div>
+            <div class="v-thumbs" role="tablist" aria-label="Held-out ventral view">
+              <button type="button" class="on" data-i="1" aria-label="View 1"><img src="assets/figs/ventral_gt_1.webp" alt="" loading="lazy"></button>
+              <button type="button" data-i="2" aria-label="View 2"><img src="assets/figs/ventral_gt_2.webp" alt="" loading="lazy"></button>
+              <button type="button" data-i="3" aria-label="View 3"><img src="assets/figs/ventral_gt_3.webp" alt="" loading="lazy"></button>
+              <button type="button" data-i="4" aria-label="View 4"><img src="assets/figs/ventral_gt_4.webp" alt="" loading="lazy"></button>
+              <button type="button" data-i="5" aria-label="View 5"><img src="assets/figs/ventral_gt_5.webp" alt="" loading="lazy"></button>
+              <button type="button" data-i="6" aria-label="View 6"><img src="assets/figs/ventral_gt_6.webp" alt="" loading="lazy"></button>
+            </div>
+          </div>
+          <p class="fig-cap"><b>Ventral-surface reconstruction</b> on six held-out photographs of the underside: ground truth, ours, and the mirror-unaware 2DGS baseline.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="res">
+            <thead><tr><th>Method</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>FLIP ↓</th></tr></thead>
+            <tbody>
+              <tr class="ours"><td>Ours (mirror)</td><td><b>17.27</b></td><td><b>0.861</b></td><td><b>0.184</b></td><td><b>0.121</b></td></tr>
+              <tr><td>No mirroring</td><td>14.73</td><td>0.768</td><td>0.278</td><td>0.205</td></tr>
+              <tr class="ref"><td><i>Ours, dorsal (reference)</i></td><td>18.56</td><td>0.862</td><td>0.153</td><td>0.126</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fig-cap"><b>Ventral-surface validation.</b> 256×256 object crops with pose-refined cameras. The render is scored unmasked, so floaters count against it. The last row scores the dorsal side under the same protocol as a reference.</p>
+      </section>
+
+      <!-- 04 Citation -->
+      <section class="section" id="citation">
+        <div class="sec-head">
+          <span class="sec-num">04</span>
+          <h2 class="sec-title">Citation</h2>
+        </div>
+        <div class="bibtex">
+          <div class="bibtex-bar">
+            <span>BibTeX</span>
+            <button class="copy-btn" id="copyBib" type="button">Copy</button>
+          </div>
+<pre id="bibText"><span class="key">@inproceedings</span>{<span class="field">overdulve2027mountedlepidoptera</span>,
+  <span class="field">title</span>     = <span class="str">{Practical High-Fidelity Novel-View Synthesis of Mounted Lepidoptera}</span>,
+  <span class="field">author</span>    = <span class="str">{Kristof Overdulve and Lode Jorissen and Nick Michiels}</span>,
+  <span class="field">booktitle</span> = <span class="str">{Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)}</span>,
+  <span class="field">year</span>      = <span class="str">{2027}</span>,
+  <span class="field">eprint</span>    = <span class="str">{2606.31679}</span>,
+  <span class="field">archivePrefix</span> = <span class="str">{arXiv}</span>,
+  <span class="field">url</span>       = <span class="str">{https://arxiv.org/abs/2606.31679}</span>,
+}</pre>
+        </div>
+      </section>
+
+      <!-- 05 Acknowledgements -->
+      <section class="section last" id="acknowledgements">
+        <div class="sec-head">
+          <span class="sec-num">05</span>
+          <h2 class="sec-title">Acknowledgements</h2>
+        </div>
+        <div class="ack">
+          <p>This research was funded by VLAIO under the TETRA program (grant agreement No. HBC.2025.0131). We gratefully acknowledge imec IDLab for computational resources via the iLab.t infrastructure, Pieter Op De Beeck of AlterEyes for providing the use case, and Frank Zwerts for providing the butterfly specimens.</p>
+          <div class="logos">
+            <div class="logo-ph"><img src="assets/dfl.png" height="100%"></div>
+            <div class="logo-ph"><img src="assets/vlaio.png" height="100%"></div>
+            <div class="logo-ph"><img src="assets/altereyes.png" height="100%"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <div class="foot-in">
+          <span>© <span id="yr"></span> Kristof Overdulve · Digital Future Lab, UHasselt</span>
+          <a href="index.html">kroverdulve.github.io ↗</a>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <script src="paper-page.js"></script>
+  <script src="figures.js"></script>
+
+</body>
+</html>
